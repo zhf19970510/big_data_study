@@ -1,0 +1,55 @@
+ssh:
+远程执行命令：
+ssh root@192.168.xx.xx 'mkdir /haha'
+
+获取远程主机环境变量并且打印：
+ssh root@192.168.xx.xx 'source /etc/profile ; echo $BIGDATA'
+
+设置ssh免密登录：
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+
+hdfs操作：
+格式化文件操作系统：
+bin/hdfs namenode -format
+
+vim /etc/sysconfig/network
+设置HOSTNAME
+
+vim /etc/hosts
+hosts写主机名和ip地址的映射
+
+关闭防火墙：
+service iptables stop
+
+设置开机关闭防火墙：
+chkconfig iptables off
+
+要注意主机节点之间需要时间同步，
+
+
+总结：
+基础设施准备：
+1. 设置IP和主机名
+    设置网关和ip的时候需要到vmware 的编辑->虚拟网络编辑器->观察 NAT模式的地址
+    DNS1=223.5.5.5
+    DBS2=114.114.114.114
+
+    vim /etc/sysconfig/network-scripts/ifcfg-eth0
+    vim /etc/sysconfig/network
+2. 关闭防火墙&selinux
+    service iptables stop
+    chkconfig iptables off
+    vi /etc/selinux/config
+    SELINUX=disabled
+3. 设置hosts映射
+    vim /etc/hosts
+4. 时间同步
+    yum install ntp -y
+    vim /etc/ntp.conf
+    server ntp1.aliyun.com
+    service ntpd start
+    chkconfig ntpd on
+5. 安装jdk
+6. 设置SSH免秘钥
+
