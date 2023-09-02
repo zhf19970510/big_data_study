@@ -1,0 +1,53 @@
+mkdir /opt/bigdata
+tar -zxvf hadoop-2.6.5.tar.gz
+
+mv hadoop-2.6.5 /opt/bigdata/
+
+cd /opt/bigdata/hadoop-2.6.5/
+
+vim /etc/profile
+export HADOOP_HOME=/opt/bigdata/hadoop-2.6.5
+export PATH=$PATH:JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+cd /opt/bigdata/hadoop-2.6.5/
+
+cd etc/hadoop
+这个目录有很多的配置文件
+
+vim hadoop-env.sh
+内容：java路径
+export JAVA_HOME=/usr/java/default
+
+vi core-site.xml
+<property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://node01:9000</value>
+</property>
+
+vim hdfs-site.xml
+<property>
+    <name>dfs.replication</name>
+    <value>1</value>
+</property>
+<!-- 指定namenode 元数据存储路径 -->
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/var/bigdata/hadoop/local/dfs/name</value>
+</property>
+<!-- 指定datanode 元数据存储路径 -->
+<property>
+    <name>dfs.datanode.data.dir</name>
+    <value>/var/bigdata/hadoop/local/dfs/data</value>
+</property>
+<proeprty>
+    <name>dfs.namenode.secondary.http-address</name>
+    <value>node01:50090</value>
+</property>
+<proeprty>
+    <name>dfs.namenode.checkpoint.dir</name>
+    <value>/var/bigdata/hadoop/local/dfs/secondary</value>
+</property>
+
+指定在哪台机器启动一个datanode
+vim slaves
+node01

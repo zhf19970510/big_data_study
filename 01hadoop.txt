@@ -6,8 +6,17 @@ ssh root@192.168.xx.xx 'mkdir /haha'
 ssh root@192.168.xx.xx 'source /etc/profile ; echo $BIGDATA'
 
 设置ssh免密登录：
+验证：ssh localhost
+
 ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
 cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+
+
+如果A想免秘地登录到B：
+A：ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+B：cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+
+公钥给谁，就可以免密登录谁
 
 hdfs操作：
 格式化文件操作系统：

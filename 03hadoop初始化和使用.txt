@@ -1,0 +1,28 @@
+格式化：
+hdfs namenode -format
+
+start-dfs.sh
+
+需要再windows： C:\Windows\System32\drivers\etc\hosts文件对应ip映射
+通过访问：
+http://node01:50070
+
+简单使用：
+hdfs dfs -mkdir /bigdata
+hdfs dfs -mkdir -p /user/root
+
+上传文件：
+hdfs dfs -put hadoop-2.6.5.tar.gz /user/root
+
+cd /var/bigdata/hadoop/local/dfs/data/current/xxxxxxxxxxxx/current/finalized
+
+cd subdir0/subdir0 数据就在设置的datanode存放路径下
+
+切割文件，linux 命令行执行以下命令：
+for i in `seq 10000`; do echo "hello hadoop $i" >> data.txt ; done
+
+// 默认推送到 /user/root 家目录下
+hdfs dfs -D dfs.blocksize=1048576 -put data.txt
+
+cd /var/bigdata/hadoop/local/dfs/data/current/xxxxxxxxxxxx/current/finalized
+

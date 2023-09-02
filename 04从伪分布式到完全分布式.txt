@@ -1,0 +1,76 @@
+伪分布式：在一个节点启动所有的角色   NN,DN,SNN
+完全分布式：
+    基础环境
+    部署配置
+        1) 角色在哪里启动
+            NN: core-site.xml fs.defaultFS hdfs://node01:9000
+            DN: slaves: node01
+            SNN: hdfs-site.xml: dfs.namenode.secondary.http.address node01:50090
+        2）角色启动时的细节配置：
+            dfs.namenode.name.dir
+            dfs.datanode.data.dir
+
+    初始化&启动
+        格式化
+            FsImage
+            version
+        start-dfs.sh
+            加载我们的配置文件
+            通过ssh免密的方式去启动相应的角色
+
+
+伪分布式到完全分布式：角色重新规划
+    基础设施：
+        每台机器都要在 /etc/hosts 文件里面配置ip，主机名映射
+        每台机器都要保证在/etc/profile文件里面配置hadoop和java的环境变量
+    部署配置：
+        和伪分布式配置类似，
+        vim hadoop-env.sh
+        内容：java路径
+        export JAVA_HOME=/usr/java/default
+
+        vi core-site.xml
+        <property>
+            <name>fs.defaultFS</name>
+            <value>hdfs://node01:9000</value>
+        </property>
+
+        vim hdfs-site.xml
+        <property>
+            <name>dfs.replication</name>
+            <value>1</value>
+        </property>
+        <!-- 指定namenode 元数据存储路径 -->
+        <property>
+            <name>dfs.namenode.name.dir</name>
+            <value>/var/bigdata/hadoop/full/dfs/name</value>
+        </property>
+        <!-- 指定datanode 元数据存储路径 -->
+        <property>
+            <name>dfs.datanode.data.dir</name>
+            <value>/var/bigdata/hadoop/full/dfs/data</value>
+        </property>
+        <proeprty>
+            <name>dfs.namenode.secondary.http-address</name>
+            <value>node02:50090</value>
+        </property>
+        <proeprty>
+            <name>dfs.namenode.checkpoint.dir</name>
+            <value>/var/bigdata/hadoop/full/dfs/secondary</value>
+        </property>
+
+        指定在哪台机器启动一个datanode
+        vim slaves
+        node02
+        node03
+        node04
+
+        最后用scp命令将相关配置同步到另外的节点
+    初始化运行：
+        hdfs namenode -format
+
+        stop-dfs.sh
+        start-dfs.sh
+
+
+    命令行使用：
