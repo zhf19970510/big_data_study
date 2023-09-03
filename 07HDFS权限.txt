@@ -1,0 +1,63 @@
+hdfs dfs -mkdir -p /user/root
+
+hdfs dfs -put xxx /
+
+hdfs没有相关命令和接口去创建用户，信任客户端 <- 默认情况使用的 操作系统提供的用户
+
+有超级用户的概念：
+    linux系统中超级用户：root
+    hdfs系统中超级用户：是namenode进程的启动用户
+
+有权限概念：
+    hdfs的权限是自己控制的   来自于hdfs的超级用户
+
+---- 实操：
+    面向操作系统  root是管理员    其他用户都叫【普通用户】
+    面向操作系统的软件   谁启动，管理这个进程，那么这个用户叫做这个软件的管理员
+
+
+    切换用root搭建的HDFS： 用god这个用户来启动
+
+    node01~node04:
+        *）stop-dfs.sh
+        1)添加用户：root
+                    useradd god
+                    passwd god
+        2)将资源与用户绑定（a，安装部署程序；b：数据存放的目录）
+            chown -R god src
+            chown -R /opt/bigdata/hadoop-2.6.5
+            chown -R /var/bigdata/hadoop
+        3)切换到god去启动 start-dfs.sh < 需要免密
+            给god做免密
+            记得要修改authorized_keys的权限：
+            chmod 600 authorized_keys
+
+            还有另外一种方式可以拷贝公钥：
+            ssh-copy-id -i id_dsa node02
+
+启动hadoop之后：
+hdfs dfs -mkdir -p /user/god
+
+修改用户组：
+hdfs dfs -chown god:ooxx /temp
+hdfs dfs -chmod 770 /temp
+
+在那么namenode对应的节点node01上执行如下命令：
+
+在操作系统添加good用户：
+useradd good
+groupadd ooxx
+# -a append -G修改组
+usermod -a -G ooxx good
+查看good用户的用户组信息：
+id good
+uid=501(good) gid=501(good) groups=501(good),502(ooxx)
+# 查看good用户的组信息
+hdfs groups
+good :
+# 发现组信息为空
+
+# 切换到 god用户，将用户和组的绑定关系上传到hdfs
+hdfs dfsadmin -refreshUserToGroupsMappings
+
+结论：默认hdfs依赖操作系统上的用户和组

@@ -1,0 +1,1 @@
+需要将core-site.xml和hdfs-site.xml配置文件拷贝到resources目录下面来
