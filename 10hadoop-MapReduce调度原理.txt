@@ -51,6 +51,44 @@ mapreduce:批量计算  流式计算
                                 2. 因为各自实现资源管理，但是他们部署在同一批硬件上，因为隔离，所以不能感知对方的使用。
                                     so：资源争抢~！！！
 
-                hadoop 2.x
-                
+hadoop 2.x
+    模型：
+        container容器     不是docker
+            虚的：
+                对象：属性：NM, CPU, mem, io量
+            物理的：
+                JVM -> 操作系统进程
+                1. NameNode会有线程监控container资源情况，超额时，NameNode直接kill掉
+                2. cgroup内核级技术：在启动jvm进程，由kernel约束死。
+                * 整合docker
+    实现： 架构/框架
+        ResourceManager
+            负责整体资源的管理
+        NodeManager 从
+            向RS汇报心跳，提交自己的资源情况
+
+    MR运行    MapReduce on yarn
+        1. MR-Cli（切片清单/配置/jar/上传到HDFS）
+            访问RM申请AppMaster
+        2. RM选择一台不忙的节点通知NM启动一个Container，在里面反射一个MRAppMaster
+        3. 启动MRAppMaster，从hdfs下载切片清单，向MR申请资源
+        4. 由MR根据自己掌握的资源情况得到一个确定清单，通知NameNode来启动container
+        5. container启动后会反向注册到已经启动的MRAppMaster进程
+        6. MRAppMaster（曾经的JobTracker阉割版不带资源管理）最终将任务Task发送给container（消息）
+        7. container会反射相应的Task类对象，调用方法执行，其结果就是我们的业务逻辑代码的执行
+        8. 计算框架都有Task失败重试的机制。
+
+    结论：
+        问题：
+            1. 单点故障（曾经是全局的，JT挂了，整个计算层没有了调度）
+                yarn：每一个APP有一个自己的AppMaster调度！（计算程序级别）
+                yarn支持AppMaster失败重试~！
+            2. 压力过大
+                yarn中每个计算程序自有AppMaster，每个AppMaster只负责自己计算程序的任务调度，轻量了。
+                AppMaster是在不同的节点启动的，默认有了负载的光环。
+            3. 集成了【资源管理和任务调度】，两者耦合
+                因为yarn只是资源管理，不负责具体的任务调度，
+                是公立的，只要计算框架集成yarn的AppMaster，大家都可以使用一个同意试图的资源层~！！！
+
+    
 
