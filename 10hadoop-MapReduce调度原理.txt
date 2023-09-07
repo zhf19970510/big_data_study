@@ -15,3 +15,42 @@ mapreduce:批量计算  流式计算
             按组，多条记录加工处理
     实现： -> 框架
         角色：
+            JobTracker
+                1. 资源管理
+                2. 任务调度
+            TaskTracker
+                任务管理
+                资源汇报
+            Client
+                1. 会根据每次的计算数据，咨询NN元数据（block）=>算：splict 得到一个切面的清单，map的数量就有了
+                split是逻辑的，block是物理的，block身上有（offset，locations），split和block是有映射关系
+                    结果：split包含偏移量，以及spit对应的map任务应该移动到哪些节点（locations）
+                    split01 A 0 500 n1 n3 n5
+                2. 生成计算程序未来运行时的相关【配置的文件】：xml
+                3. 未来的移动应该相对可靠
+                    cli会将jar，split清单，配置xml上传到hdfs的目录中（上传的数据，副本数10）
+                4. cli会调用JobTracker，通知要启动一个计算程序了，并且告知文件都放在哪个hdfs的哪些地方。
+
+                JobTracker收到启动程序后，
+                    1. 从hdfs中取回【split清单】
+                    2. 根据自己收到的TaskTracker汇报的资源，最终确定每一个split对应的map应该去到哪一个节点，【确定清单】
+                    3. 未来，TaskTracker在心跳的时候会取回分配给自己的任务信息~！
+
+                TaskTracker:
+                    1. 在心跳取回任务后
+                    2. 从hdfs中下载jar, xml 到本机
+                    3. 最终启动任务描述中的MapTask/ReduceTask，（最终，代码在某一个节点被启动，是通过client上传，TaskTracker下载：计算向数据移动的实现~！）
+
+                问题：
+                    JobTracker 3个问题：
+                        1. 单点故障
+                        2. 压力过大
+                        3. 集成了【资源管理和任务调度】，两者耦合
+                            弊端：未来的计算框架不能复用资源管理
+                                1. 重复造轮子
+                                2. 因为各自实现资源管理，但是他们部署在同一批硬件上，因为隔离，所以不能感知对方的使用。
+                                    so：资源争抢~！！！
+
+                hadoop 2.x
+                
+
