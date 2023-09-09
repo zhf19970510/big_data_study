@@ -1,1 +1,3 @@
 需要将core-site.xml和hdfs-site.xml配置文件拷贝到resources目录下面来
+
+如果需要开发mapreduce，还需要将mapred-site.xml和yarn-site.xml文件拷贝到resources目录下面来

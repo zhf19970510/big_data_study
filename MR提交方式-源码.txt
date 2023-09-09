@@ -1,0 +1,21 @@
+提交方式：
+    1. 开发-> jar->上传到集群中的某一个节点 -> hadoop jar ooxx.jar ooxx in out
+    2. 嵌入【linux、windows】（非hadoop jar）的集群方式 on yarn
+        集群： M、R
+        client -> RM -> AppMaster
+        mapreduce.framework.name -> yarn
+        conf.set("mapreduce.app-submission.cross-platform", "true");
+        job.setJar("E:\\workspace\\code\\big_data_study\\big_data_hadoop\\target\\big_data_hadoop-1.0-SNAPSHOT.jar");
+
+    3. local，单机 自测
+        mapreduce.framework.name -> local
+        conf.set("mapreduce.app-submission.cross-platform", "true");    // windows上必须配置
+        3.1 在win的系统中部署我们的hadoop：
+            C:\usr\hadoop-2.6.5\hadoop-2.6.5
+        3.2 将资料中的 \hadoop-install\soft\bin 下的文件覆盖到 部署的bin目录
+        3.3 将hadoop.dll 复制到 C:\windows\system32\ 目录下
+        3.4 设置环境变量 HADOOP_HOME C:\usr\hadoop-2.6.5\hadoop-2.6.5
+
+参数个性化：
+    GenericOptionsParser parser = new GenericOptionsParser(conf, args);
+    String[] otherArgs = parser.getRemainingArgs();
