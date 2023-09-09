@@ -1,0 +1,83 @@
+hadoop2.x 出现了一个yarn：资源管理 > MR没有后台常用服务
+    yarn模型：container 容器，里面会运行我们的AppMaster，map/reduce Task解耦
+
+搭建：
+
+        NN  NN  JN  ZKFC    ZK  DN  RM  NM
+node01  *       *   *
+node02      *   *   *       *   *        *
+node03          *           *   *    *   *
+NODE04                      *   *    *   *
+
+
+通过官网：
+    mapred-site.xml     mapreduce on yarn
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+
+    yarn-site.xml
+    // shuffle  洗牌  M -shuffle> R
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+
+    <property>
+        <name>yarn.resourcemanager.ha.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.cluster-id</name>
+        <value>cluster1</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.ha.rm-ids</name>
+        <value>rm1,rm2</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.hostname.rm1</name>
+        <value>node03</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.hostname.rm2</name>
+        <value>node04</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.zk-address</name>
+        <value>node02:2181,node03:2181,node04:2181</value>
+    </property>
+
+
+流程：
+    node01:
+        cd $HADOOP_HOME
+        cd etc/hadoop
+        修改上述配置文件
+        # 分发文件
+        scp mapred-site.xml yarn-site.xml node02:`pwd`
+        scp mapred-site.xml yarn-site.xml node03:`pwd`
+        scp mapred-site.xml yarn-site.xml node04:`pwd`
+        start-yarn.sh
+
+    node03,node04:
+    yarn-daemon.sh start resourcemanager
+
+    http://node03:8088
+    http://node04:8088
+
+
+-----------MR官方案例使用：wc
+    实战：MR ON YARN 的运行方式
+        hdfs dfs -mkdir -p /data/wc/input
+        hdfs dfs -D dfs.blocksize=1048576 -put data.txt /data/wc/input
+        cd $HADOOP_HOME
+        cd share/hadoop/mapreduce
+        hadoop jar hadoop-mapreduce-examples-2.6.5.jar wordcount /data/wc/input /data/wc/output
+        hdfs dfs -ls /data/wc/output
+        hdfs dfs -cat /data/wc/output/part-r-00000
+        # 下载文件到本地磁盘
+        hdfs dfs -get /data/wc/output/part-r-00000 ./
+
+    抛出一个问题：
