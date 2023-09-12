@@ -101,3 +101,94 @@ Client：
 
 ReduceTask
     input -> reduce -> output
+    map:run:        while(context.nextKeyValue())
+                        一条记录调用一次map
+    reduce:run:     while(context.nextKey())
+                        一组数据调用一次reduce
+
+    doc:
+        1. shuffle:     洗牌（相同的key被拉取到一个分区），拉取数据。
+        2. sort:     整个MR框架中只有map端是从无序到有序的过程，用的是快速排序。
+                        reduce这里所谓的sort其实你可以想成就是一个对着map排好序的一堆小文件做归并排序的过程
+                grouping comparator
+                1970-1-22 33 bj
+                1970-1-8  23 sh
+                    排序比较啥：年、月、温度，，且温度倒序
+                    分组比较器：年、月
+        3. reduce：
+
+        run:
+            rIter = shuffle...      // reduce拉取回属于自己的数据，并包装成一个迭代器~！
+                类比：file(磁盘上） -> open -> readline -> hasNext() -> next()
+                时时刻刻想：我们做的是大数据计算，数据可能撑爆内存。
+                comparator = job.getOutputValueGroupComparator();
+                                    如果没有手工设置分组比较器，默认返回 getOutputKeyComparator();
+                                        1. 优先取用户覆盖的自定义排序比较器
+                                        2. 保底，取key这个类型自身的比较器。
+                    #: 分组比较器可不可以复用排序比较器？
+                        设么叫排序比较器：返回值： -1, 0, 1
+                        什么叫做分组比较器：返回值：  布尔值，false/true
+                        可以的，0相等，否则不等。
+
+            rIter 相当于是input，真迭代器
+            rIter最终会传入ReduceContextImpl中，相当于是我们自己写reduce程序的时候context.write的context实现类
+            ReduceContextImpl:
+                nextKey();
+                nextKeyValue();
+                    在这个方法中会用到input取数据
+                    在这个方法中有几个变量需要注意下：
+                        hasMore: 还有数据就代表为true
+                        nextKeyIsSame = false;
+                    在这个方法中做了几件事情：
+                        1. 通过input取数据，对key和value赋值
+                        2. 返回布尔值
+                        3. reduce会多取一条数据判断更新nextKeyIsSame，窥探下一条记录是不是还是一组的。
+
+                getCurrentKey():
+                    return key;
+                getValues();
+                    return iterable;    // iterable 和 hasMore、nextKeyIsSame一样，都是ReduceContextImpl的成员变量; iterable = ValueIterable;
+                        ValueIterable:
+                            iterator():
+                                return iterator;    // iterator = ValueIterator
+                                    ValueIterator:  // 假迭代器：嵌套迭代器
+                                        hasNext();
+                                            return firstValue || nextKeyIsSame;
+                                        next();
+            **:
+                reduceTask拉取回的数据被包装成一个迭代器
+                reduce方法被调用的时候，并没有把一组数据真的加载到内存，而是传递了一个迭代器-values
+                在reduce方法中使用这个迭代器的时候，hasNext方法判断nextKeyIsSame，下一条是不是还是一组数据
+                next方法：负责调用nextKeyValue方法，从reduceTask级别的迭代器，并同时更新nextKeyIsSame
+
+                以上的设计艺术：
+                    充分利用了迭代器模式，
+                    规避了内存数据OOM的问题，
+                    且，之前不是说了框架是排序的，所以真假迭代器他们只需要协作，一次I/O就可以线性处理完每一组数据~！
+
+
+mapTask 和 reduceTask的比较器比较：
+mapTask:
+1. 优先取用户定义的排序比较器
+2. 取key自身的排序比较器
+
+reduceTask:
+1. 取用户自定义的分组比较器
+2. 取用户定义的排序比较器
+3. 取key自身的排序比较器
+
+组合方式：
+    1) 用户不设置排序和分组比较器；
+        map：取key自身的排序比较器
+        reduce：取key自身的排序比较器
+    2）设置了排序，没有设置分组：
+        map：取用户定义的排序比较器
+        reduce：取用户定义的排序比较器
+    3）设置了分组
+        map：取key自身的排序比较器
+        reduce：取用户自定义的分组比较器
+    4）设置了排序和分组
+        map：取用户定义的排序比较器
+        reduce：取用户自定义的分组比较器
+
+结论：框架很灵活，给了我们各种加工数据排序和分组的方式
