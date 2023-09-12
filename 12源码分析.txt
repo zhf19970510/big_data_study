@@ -1,0 +1,103 @@
+源码的分析（目的）
+3个环节 <- 分布式计算 <- 追求：
+                        计算向数据移动
+                        并行度、分治
+                        数据本地化读取
+
+Client：
+    没有计算发生
+    很重要：支撑了计算向数据移动和计算的并行度
+    1. Checking the input and output specifications of the job.
+    2. Computing the InputSplits for the job. // split    -> 并行度和计算向数据移动就可以实现了
+    3. Setup the requisite accouting information for the DistrubtedCache of the job,    // 可以使用缓存或者内存的东西来加速
+    4. Coping the job's jar and configuration to the map-reduce system directory on the distribute file system. // 将jar包和配置信息拷贝到分布式文件系统
+    5. Submitting the job to the JobTracker and optionally monitoring it's status.
+
+    MR框架默认的输入格式化类：TextInputFormat < FileInputFormat < InputFormat
+                                            getSplits
+        minSize = 1
+        maxSize = Long.Max
+        blockSize = file
+        splitSize = Math.max(minSize, Math.min(maxSize, blockSize));    // 默认split大小等于块大小
+
+        切片split是一个窗口机制：（调大split改小，调小split改大）
+            如果我想得到一个比block大的split
+
+        if((blockLocations[i].getOffset() <= offset) && (offset < blockLocations[i].getOffset() + blockLocations[i].getLength())
+
+        split:  解耦  存储层和计算层
+            1. file
+            2. offset
+            3. length
+            4. hosts        // 之称的计算向数据移动
+
+
+   MapTask:
+    input -> map -> output
+    input:(split+format)
+        来自于我们输入的格式化类给我们实际返回的记录读取器对象
+            TextInputFormat -> LineRecordReader
+                split:file, offset, length
+                init:
+                    in = fs.open(file).seek(offset)
+                    除了第一个切片对应的map，之后的map都在init环节，从切片包含的数据中，让出第一行，并把切片的起始位置更新为切片的第二行。换言之，前一个map会多读取一行，来弥补hdfs把数据切割的问题。
+                nextKeyValue():
+                    1. 读取数据中的一条记录对key，value赋值。
+                    2. 返回布尔值
+                getCurrentKey():
+                getCurrentValue():
+
+
+
+                output
+                    MapOutputBuffer:
+                            map输出的KV会序列化成字节数组，算出P，最终是3元组, K V P
+                            buffer使用的是环形缓冲区：
+                                1. 本质还是线性字节数组
+                                2. 赤道，两端方向放KV，索引
+                                3. 索引：是固定宽度，16B
+                                    a)P
+                                    b)KS
+                                    c)VS
+                                    d)VL
+                                4. 如果数据填充到阈值：80%，启动线程：
+                                    快速排序80%数据，同时map输出的线程向剩余的空间写
+                                    快速排序的过程：是比较key排序，但是移动的是索引
+                                5. 最终，溢写时只要按照排序的索引，卸下文件中的数据就是有序的
+                                    注意：排序是二次排序
+                                        分区有序：        最后reduce拉取是按照分区的
+                                        分区内key有序：       因为reduce计算是按分组计算。分组的语义（相同的key排在了一起）。
+                                6. 调优：combiner
+                                    1. 其实就是一个map里的reduce
+                                        按组统计
+                                    2. 发生在哪个时间点：
+                                        内存溢写数据之前，排序之后
+                                            a)溢写的io变少
+                                            b)最终map输出结束，输出过程中，buffer溢写出多个小文件（内部有序）
+                                                minSpillsForCombine = 3  // 默认值，可以设置修改
+                                                map最终会把溢写出来的小文件合并成一个大文件：避免小文件的碎片化对未来reduce拉取数据造成的随机读写
+                                                也会触发combine
+                                    3. combine注意：
+                                        必须幂等
+                                        例子：
+                                            1. 求和计算
+                        partitioner
+                        collector
+                        MapOutputBuffer:
+                            init():
+                                spillper = 0.8
+                                sortmb = 100MB
+                                sorter = QuickSort
+                                comparator = job.getOutputKeyComparator();
+                                    1. 优先取用户覆盖的自定义排序比较器
+                                    2. 保底，取key这个类型自身的比较器。
+
+                                combiner ? reduce
+                                        minSpillsForCombine = 3  // 默认值，可以设置修改
+
+                                SpillThread  // 溢写线程
+                                sortAndSpill()  // 排序并且溢写
+
+
+ReduceTask
+    input -> reduce -> output
