@@ -21,14 +21,14 @@ public class TReducer extends Reducer<TKey, IntWritable, Text, IntWritable> {
         while (iter.hasNext()) {
             IntWritable val = iter.next();  // context.nextKeyValue() -> 对key和value更新值！！！
             if(flg == 0) {
-                rKey.set(key.getYear() + "-" + key.getMonth() + "-" + key.getDay());
+                rKey.set(key.getYear() + "-" + key.getMonth() + "-" + key.getDay()+ "@" + key.getLocation());
                 rVal.set(key.getWd());
                 context.write(rKey, rVal);
                 day = key.getDay();
                 flg++;
             }
             if(flg != 0 && day != 0) {
-                rKey.set(key.getYear() + "-" + key.getMonth() + "-" + key.getDay());
+                rKey.set(key.getYear() + "-" + key.getMonth() + "-" + key.getDay() + "@" + key.getLocation());
                 rVal.set(key.getWd());
                 context.write(rKey, rVal);
                 break;

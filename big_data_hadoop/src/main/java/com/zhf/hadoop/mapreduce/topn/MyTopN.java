@@ -30,6 +30,10 @@ public class MyTopN {
         job.setJarByClass(MyTopN.class);
         job.setJobName("TopN");
 
+        // 客户端规划的时候将join的右表cache到mapTask出现的节点上
+        // map端的join操作，只能集群去运行
+        job.addCacheFile(new Path("/data/topn/dict/dict.txt").toUri());
+
         Path inFile = new Path(otherArgs[0]);
         TextInputFormat.addInputPath(job, inFile);
 
